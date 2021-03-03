@@ -73,11 +73,11 @@ function vulns(){
 	fi
 }
 
-clear && tput civis
-
 HOST=$1
 
 if [ -e $HOST ];then echo -e "\n$redColour[!]$endColour Usage: $0 <IP> [<CIDR>]"; exit 0; fi
+
+tput civis
 
 echo "${HOST:(-3)}" | grep -oP "\/\d{1,2}" &>/dev/null
 if [[ $? -eq 0 ]];then
