@@ -103,8 +103,12 @@ if [[ $? -eq 0 ]];then
 
 	rm -f "$(pwd)/targets.txt"
 else
+	echo
 	if [ ! -d "$(pwd)/log" ]; then mkdir "$(pwd)/"{exploits,log,loot,tools} 2>/dev/null; fi
 	TCP; UDP; vulns
+	if [[ -f "$(pwd)/log/TCP-services.xml" ]];then echo -e "$greenColour[$HOST]$endColour Nmap TCP scan stored at 'file://$(pwd)/log/TCP-services.xml'"; fi
+	if [[ -f "$(pwd)/log/UDP-services.xml" ]];then echo -e "$greenColour[$HOST]$endColour Nmap UDP scan stored at 'file://$(pwd)/log/UDP-services.xml'"; fi
+	if [[ -f "$(pwd)/log/vulns.xml" ]];then echo -e "$greenColour[$HOST]$endColour Nmap Vuln scan stored at 'file://$(pwd)/log/vulns.xml'"; fi
 fi
 
 tput cnorm
