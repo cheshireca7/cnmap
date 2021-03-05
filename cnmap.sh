@@ -86,7 +86,7 @@ if [[ $? -eq 0 ]];then
 	diff -u "$(pwd)/discovery.txt" "$(pwd)/current.txt" | grep -oP "\-.\d{1,3}\..*" | tr -d '-' > "$(pwd)/targets.txt"
 	rm -f "$(pwd)/discovery.txt" "$(pwd)/current.txt"
 
-	if [[ "$(wc -l $(pwd)/targets.txt | awk '{print $1}')" == "0" ]];then echo -e "$redColour[$HOST]$endColour No hosts alive"; exit 0; fi
+	if [[ "$(wc -l "$(pwd)"'/targets.txt' | awk '{print $1}')" == "0" ]];then echo -e "$redColour[$HOST]$endColour No hosts alive"; exit 0; fi
 
 	echo -e "$greenColour[$HOST]$endColour Discovered hosts: $yellowColour$(cat "$(pwd)/targets.txt" | xargs | sed 's/ /, /g')$endColour"
 	while read line; do 
