@@ -10,64 +10,36 @@ trap ctrl_c INT
 
 function ctrl_c(){
 	echo -ne "$redColour[!]$endColour Keyboard interrupt received, exiting"
+	rm -f "$(pwd)/targets.txt" "$(pwd)/"{TCP,UDP,SERVICES}
 	pkill nmap 2>&1 > /dev/null 
 	tput cnorm
 	exit 1
 }
 
 function TCP(){
-	echo -e "$blueColour[$HOST]$endColour Scanning all TCP ports"
-
-	nmap -Pn -n --disable-arp-ping --open -vv -T4 --min-rate 3000 $HOST -p- -oA "$(pwd)/log/TCP-openports" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null
-	
-	tPORTS=$(grep -oP "\d+/tcp" "$(pwd)/log/TCP-openports.nmap" | awk -F/ '{print $1}' | xargs | sed 's/ /,/g')
-	if [ ! -e $tPORTS ];then
-		echo -e "$greenColour[$HOST]$endColour Scanning open TCP ports: $yellowColour$tPORTS$endColour"
-	
-		nmap -Pn -n --disable-arp-ping --open -vv --min-rate 3000 $HOST -p$tPORTS -sCV --version-all -oA "$(pwd)/log/TCP-services" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null
-		if [[ -f "$(pwd)/$line/log/TCP-services.xml" ]];then echo -e "$greenColour[$line]$endColour Nmap TCP scan stored at 'file://$(pwd)/$line/log/TCP-services.xml'"; fi
-	else
-		echo -e "$redColour[$HOST]$endColour Nmap didn't found TCP ports open"
-		rm "$(pwd)/log/"TCP-openports.*
-	fi
+	echo -ne "\t$greenColour[$HOST]$endColour TCP open ports:" $(nmap -Pn -n --disable-arp-ping --open -vv -T4 --min-rate 3000 $HOST -p- -oA "$(pwd)/log/TCP-openports" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null; tPORTS=$(grep -oP "\d+/tcp" "$(pwd)/log/TCP-openports.nmap" | awk -F/ '{print $1}' | xargs | sed 's/ /,/g' | tee "$(pwd)/log/tports.txt"); if [ ! -e $tPORTS ];then echo -e " $yellowColour$tPORTS$endColour"; else echo -e "$redColour NONE$endColour"; rm "$(pwd)/log/"TCP-openports.*; fi); echo
+	if [[ -f "$(pwd)/log/TCP-openports.xml" ]];then echo -e "\t$greenColour[$HOST]$endColour TCP scan stored at 'file://$(pwd)/$HOST/log/TCP-openports.xml'"; fi
 }
 
 function UDP(){
-	echo -e "$blueColour[$HOST]$endColour Scanning all UDP ports"
-
-	nmap -Pn -n --disable-arp-ping --open -vv -sU $HOST --max-scan-delay 300ms --max-retries 3 --min-rate 100 --min-parallelism 5 --max-rtt-timeout 200ms -p- -oA "$(pwd)/log/UDP-openports" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null
-
-	uPORTS=$(grep -oP "\d+/udp" "$(pwd)/log/UDP-openports.nmap" | awk -F/ '{print $1}' | xargs | sed 's/ /,/g')
-	if [ ! -e $uPORTS ];then
-		echo -e "$greenColour[$HOST]$endColour Scanning open UDP ports: $yellowColour$uPORTS$endColour"
-	
-		nmap -Pn -n --disable-arp-ping --open -vv $HOST -p$uPORTS -sUCV --version-all --version-intensity 0 -oA "$(pwd)/log/UDP-services" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null
-		if [[ -f "$(pwd)/$line/log/UDP-services.xml" ]];then echo -e "$greenColour[$line]$endColour Nmap UDP scan stored at 'file://$(pwd)/$line/log/UDP-services.xml'"; fi
-	else
-		echo -e "$redColour[$HOST]$endColour Nmap didn't found UDP ports open"
-		rm "$(pwd)/log/"UDP-openports.*
-	fi
+	echo -ne "\t$blueColour[$HOST]$endColour UDP open ports:" $(nmap -Pn -n --disable-arp-ping --open -vv -sU $HOST --max-scan-delay 300ms --max-retries 3 --min-rate 100 --min-parallelism 5 --max-rtt-timeout 200ms -p- -oA "$(pwd)/log/UDP-openports" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null; uPORTS=$(grep -oP "\d+/udp" "$(pwd)/log/UDP-openports.nmap" | awk -F/ '{print $1}' | xargs | sed 's/ /,/g' | tee "$(pwd)/log/uports.txt"); if [ ! -e $uPORTS ];then echo -e " $yellowColour$uPORTS$endColour"; else echo -e "$redColour NONE$endColour"; rm "$(pwd)/log/"UDP-openports.*; fi); echo
+	if [[ -f "$(pwd)/log/UDP-openports.xml" ]];then echo -e "\t$greenColour[$HOST]$endColour UDP scan stored at 'file://$(pwd)/$HOST/log/UDP-openports.xml'"; fi
 }
 
-function vulns(){
+function services(){
+	tPORTS=$(cat "$(pwd)/log/tports.txt" 2>/dev/null)
+	uPORTS=$(cat "$(pwd)/log/uports.txt" 2>/dev/null)
 	if [[ "$tPORTS" == "" && "$uPORTS" == "" ]];then
-		echo -e "$redColour[$HOST]$endColour No TCP/UDP ports open, aborting vulnerability scan"
+		echo -e "\t$redColour[$HOST]$endColour No TCP/UDP ports open, aborting services scan"
 	else
 		if [ -e $uPORTS ];then
-			echo -e "$blueColour[$HOST]$endColour Scanning for known vulnerabilities on ports => $yellowColour$tPORTS$endColour"
-			nmap -Pn -n --disable-arp-ping -vv -T4 --min-rate 3000 $HOST -p$tPORTS -sV --script=vulscan/vulscan.nse -oA "$(pwd)/log/vulscan" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null
-			nmap -Pn -n --disable-arp-ping -vv -T4 --min-rate 3000 $HOST -p$tPORTS -sV --script "vuln" -oA "$(pwd)/log/vuln-nmap" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null
+			echo -ne "\t$blueColour[$HOST]$endColour Scanning TCP open ports ... " $(nmap -Pn -n --disable-arp-ping -vv -T4 --min-rate 3000 $HOST -p$tPORTS -sCV --version-all --script "+vuln and safe" --script=vulscan/vulscan.nse --script-args "vulscanshowall=0,vulscanoutput='{title} - {link}\n'" -oA "$(pwd)/log/services" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null; echo -e "$greenColour Done$endColour"); echo
 		elif [ -e $tPORTS ];then
-			echo -e "$blueColour[$HOST]$endColour Scanning for known vulnerabilities on ports => $yellowColour$uPORTS$endColour"
-			nmap -Pn -n --disable-arp-ping -vv -sUV $HOST -p$uPORTS --script=vulscan/vulscan.nse -oA "$(pwd)/log/vulscan" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null
-			nmap -Pn -n --disable-arp-ping -vv -sUV $HOST -p$uPORTS --script "vuln" -oA "$(pwd)/log/vuln-nmap" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null
+			echo -ne "\t$blueColour[$HOST]$endColour Scanning UDP open ports ... " $(nmap -Pn -n --disable-arp-ping -vv -sUV $HOST -p$uPORTS -sCV --version-all --script "+vuln and safe" --script=vulscan/vulscan.nse --script-args "vulscanshowall=0,vulscanoutput='{title} - {link}\n'" -oA "$(pwd)/log/services" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null; echo -e "$greenColour Done$endColour"); echo
 		else
-			echo -e "$blueColour[$HOST]$endColour Scanning for known vulnerabilities on ports =>$yellowColour T:$tPORTS U:$uPORTS$endColour"
-			nmap -Pn -n --disable-arp-ping -vv $HOST -sSUV -pT:$tPORTS,U:$uPORTS --script=vulscan/vulscan.nse -oA "$(pwd)/log/vulscan" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null
-			nmap -Pn -n --disable-arp-ping -vv $HOST -sSUV -sU -pT:$tPORTS,U:$uPORTS --script "vuln" -oA "$(pwd)/log/vuln-nmap" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null
+			echo -ne "\t$blueColour[$HOST]$endColour Scanning TCP/UDP open ports ... " $(nmap -Pn -n --disable-arp-ping -vv $HOST -sSUCV -pT:$tPORTS,U:$uPORTS --version-all --script "+vuln and safe" --script=vulscan/vulscan.nse --script-args "vulscanshowall=0,vulscanoutput='{title} - {link}\n'" -oA "$(pwd)/log/services" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null; echo -e "$greenColour Done$endColour"); echo
 		fi
-		if [[ -f "$(pwd)/$line/log/vulscan.xml" ]];then echo -e "$greenColour[$line]$endColour Vulscan report stored at 'file://$(pwd)/$line/log/vulscan.xml'"; fi
-		if [[ -f "$(pwd)/$line/log/vuln-nmap.xml" ]];then echo -e "$greenColour[$line]$endColour Nmap Vuln scan stored at 'file://$(pwd)/$line/log/vuln-nmap.xml'"; fi
+		if [[ -f "$(pwd)/log/services.xml" ]];then echo -e "\t$greenColour[$HOST]$endColour Services scan stored at 'file://$(pwd)/$HOST/log/services.xml'"; fi
 	fi
 }
 
@@ -84,35 +56,46 @@ if [ $? -ne 0 ];then echo -e "\n$redColour[!]$endColour Usage: $0 <OPTIONS> targ
 
 tput civis
 
-echo -ne "\n$blueColour[+]$endColour Updating Vulscan databases ..."
-cd /usr/share/nmap/scripts/vulscan && rm *.csv &>/dev/null; wget -q $(curl -sk https://github.com/scipag/vulscan | grep -oP "\"(https://www.computec.ch.*?.csv)\"" | tr -d '"' | xargs) &>/dev/null
-cd - &>/dev/null
+echo -ne "\n$blueColour[*]$endColour Updating Vulscan database ..."
+rm /usr/share/nmap/scripts/vulscan/exploitdb.csv &>/dev/null
+wget -q https://www.computec.ch/projekte/vulscan/download/exploitdb.csv -O /usr/share/nmap/scripts/vulscan/exploitdb.csv &>/dev/null
 echo -e "$greenColour Done$endColour"
 echo "${HOST:(-3)}" | grep -oP "\/\d{1,2}" &>/dev/null
 if [[ $? -eq 0 ]];then
 
-	echo -e "$blueColour[$HOST]$endColour Discovering alive host"
+	echo -e "\n$blueColour[*]$endColour Discovery scan started\n"
+	echo -ne "\t$greenColour[$HOST]$endColour Alive hosts: "
 	nmap -sn -n -PS20,21,22,23,25,53,80,110,143,135,139,443,445,1433,3306,3389,8080,8443 -PU53,67,68,69,111,123,161,500,4500,5353 $HOST -oN "$(pwd)/discovery.nmap" &>/dev/null
 	grep "Nmap scan report" "$(pwd)/discovery.nmap" | awk '{print $NF}' > "$(pwd)/discovery.txt"
 	hostname -I | sed 's/ /\n/g' | grep -v 'fd15' > "$(pwd)/current.txt"
 	diff -u "$(pwd)/discovery.txt" "$(pwd)/current.txt" | grep -oP "\-.\d{1,3}\..*" | tr -d '-' > "$(pwd)/targets.txt"
 	rm -f "$(pwd)/discovery.txt" "$(pwd)/current.txt"
-
-	if [[ "$(wc -l "$(pwd)"'/targets.txt' | awk '{print $1}')" == "0" ]];then echo -e "$redColour[$HOST]$endColour No hosts alive"; exit 0; fi
-
-	echo -e "$greenColour[$HOST]$endColour Discovered hosts: $yellowColour$(cat "$(pwd)/targets.txt" | xargs | sed 's/ /, /g')$endColour"
+	if [[ "$(wc -l "$(pwd)"'/targets.txt' | awk '{print $1}')" == "0" ]];then echo -e "$redColour NONE$endColour"; exit 0; fi
+	echo -e "$yellowColour$(cat "$(pwd)/targets.txt" | xargs | sed 's/ /, /g')$endColour"
+	
+	echo -e "\n$blueColour[*]$endColour TCP scan started\n"
 	while read line; do 
 		if [ ! -d "$(pwd)/$line" ]; then mkdir -p "$(pwd)/$line/"{exploits,log,loot,tools}; fi
-		(HOST=$line; cd $HOST; TCP; UDP; vulns) &
+		(HOST=$line; cd $HOST; TCP) &
 	done < "$(pwd)/targets.txt"
+
 	wait
-	rm -f "$(pwd)/targets.txt"
+	echo -e "\n$blueColour[*]$endColour Service scan started\n"
+	while read line; do 
+		(HOST=$line; cd $HOST; services) &
+	done < "$(pwd)/targets.txt"
+
+	wait
+	echo -e "\n$blueColour[*]$endColour UDP scan started\n"
+	while read line; do 
+		(HOST=$line; cd $HOST; UDP) &
+	done < "$(pwd)/targets.txt"
+
+	wait
+	rm -f "$(pwd)/targets.txt" "$(pwd)/"{TCP,UDP,SERVICES}
 else
 	if [ ! -d "$(pwd)/log" ]; then mkdir "$(pwd)/"{exploits,log,loot,tools} 2>/dev/null; fi
-	TCP; UDP; vulns
-	if [[ -f "$(pwd)/log/TCP-services.xml" ]];then echo -e "$greenColour[$HOST]$endColour Nmap TCP scan stored at 'file://$(pwd)/log/TCP-services.xml'"; fi
-	if [[ -f "$(pwd)/log/UDP-services.xml" ]];then echo -e "$greenColour[$HOST]$endColour Nmap UDP scan stored at 'file://$(pwd)/log/UDP-services.xml'"; fi
-	if [[ -f "$(pwd)/log/vulns.xml" ]];then echo -e "$greenColour[$HOST]$endColour Nmap Vuln scan stored at 'file://$(pwd)/log/vulns.xml'"; fi
+	TCP; services; UDP
 fi
 
 tput cnorm
