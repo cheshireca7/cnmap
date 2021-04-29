@@ -10,15 +10,15 @@ grayColour="\e[0;37m\033[1m"
 trap ctrl_c INT
 
 function ctrl_c(){
-	echo -ne "\n$redColour[!]$endColour Keyboard interrupt received, exiting ...\n"
+	echo -ne "\n\n$redColour[!]$endColour Keyboard interrupt received, exiting ...\n"
 	tput cnorm
-	rm -f "$(pwd)/targets.txt" "$(pwd)/*/log/?ports.txt" "$(pwd)/discovery.txt"
-	pkill cnmap &>/dev/null
+	rm -f "$(pwd)/targets.txt" "$(pwd)"/*/log/?ports.txt "$(pwd)/discovery.txt"
+	exit -1
 }
 
 function TCP(){
-	echo -ne "\t$greenColour[$HOST]$endColour TCP open ports:" $(nmap -Pn -n --disable-arp-ping --open -vv -T4 --min-rate 3000 $HOST -p- -oA "$(pwd)/log/TCP-openports" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null; tPORTS=$(grep -oP "\d+/tcp" "$(pwd)/log/TCP-openports.nmap" | awk -F/ '{print $1}' | xargs | sed 's/ /,/g' | tee "$(pwd)/log/tports.txt"); if [ ! -e $tPORTS ];then echo -e " $yellowColour$tPORTS$endColour"; else echo -ne "$redColour NONE$endColour"; rm "$(pwd)/log/"TCP-openports.*; fi); echo
-	tPORTS="$(cat "$(pwd)/log/tports.txt")"
+	echo -ne "\t$greenColour[$HOST]$endColour TCP open ports:" $(nmap -Pn -n --disable-arp-ping -vv -T4 --min-rate 3000 $HOST -p- -oA "$(pwd)/log/tcp-openports" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null; tPORTS=$(grep -oP "\d+/tcp" "$(pwd)/log/tcp-openports.nmap" | awk -F/ '{print $1}' | xargs | sed 's/ /,/g' | tee "$(pwd)/log/tports.txt"); if [ ! -e $tPORTS ];then echo -e " $yellowColour$tPORTS$endColour"; else echo -ne "$redColour NONE$endColour"; rm "$(pwd)/log/"tcp-openports.* "$(pwd)/log/tports.txt" &>/dev/null; fi); echo
+	tPORTS="$(cat "$(pwd)/log/tports.txt" 2>/dev/null)"
 	IFS=',' read -r -a atPORTS <<< "$tPORTS"
 	for p in "${atPORTS[@]}"; do 
 		if [[ `curl -sIkm 1 "http://$HOST:$p" | grep HTTP` != "" || `curl -sIkm 1 "https://$HOST:$p" | grep HTTP` != "" ]];then 
@@ -41,21 +41,21 @@ function TCP(){
 			dns_enum $p &
 		fi
 	done 
-	if [[ -f "$(pwd)/log/TCP-openports.xml" ]];then echo -e "\t$greenColour[$HOST]$endColour TCP scan stored at $grayColour'file://$(pwd)/log/TCP-openports.xml'$endColour"; fi
+	if [[ -f "$(pwd)/log/tcp-openports.xml" ]];then echo -e "\t$greenColour[$HOST]$endColour TCP scan stored at $grayColour'file://$(pwd)/log/tcp-openports.xml'$endColour"; fi
 	
 }
 
 function UDP(){
-	echo -ne "\t$blueColour[$HOST]$endColour UDP open ports:" $(nmap -Pn -n --disable-arp-ping --open -vv -sU $HOST --max-scan-delay 500ms --max-rtt-timeout 300ms --max-retries 1 -oA "$(pwd)/log/udp-openports" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null; uPORTS=$(grep -oP "\d+/udp" "$(pwd)/log/udp-openports.nmap" | awk -F/ '{print $1}' | xargs | sed 's/ /,/g' | tee "$(pwd)/log/uports.txt"); if [ ! -e $uPORTS ];then echo -e " $yellowColour$uPORTS$endColour"; else echo -e "$redColour NONE$endColour"; rm "$(pwd)/log/"udp-openports.*; fi); echo
+	echo -ne "\t$blueColour[$HOST]$endColour UDP open ports:" $(nmap -Pn -n --disable-arp-ping -vv -sU $HOST --max-scan-delay 500ms --max-rtt-timeout 300ms -oA "$(pwd)/log/udp-openports" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null; uPORTS=$(grep -oP "\d+/udp" "$(pwd)/log/udp-openports.nmap" | awk -F/ '{print $1}' | xargs | sed 's/ /,/g' | tee "$(pwd)/log/uports.txt"); if [ ! -e $uPORTS ];then echo -e " $yellowColour$uPORTS$endColour"; else echo -e "$redColour NONE$endColour"; rm "$(pwd)/log/"udp-openports.* "$(pwd)/log/uports.txt" &>/dev/null; fi); echo
 	if [[ -f "$(pwd)/log/udp-openports.xml" ]];then echo -e "\t$greenColour[$HOST]$endColour UDP scan stored at $grayColour'file://$(pwd)/log/udp-openports.xml'$endColour"; fi
 }
 
 function services(){
 	ports_path="$(pwd)/log"
 
-	if [[ -f "$ports_path/tports.txt" && ! -z "$(cat $ports_path/tports.txt)" ]];then
+	if [[ -f "$ports_path/tports.txt" ]];then
 		tPORTS=$(cat "$(pwd)/log/tports.txt" 2>/dev/null)
-		echo -ne "\t$blueColour[$HOST]$endColour Scanning TCP open ports ..." $(nmap -Pn -n --disable-arp-ping -vv -T4 --min-rate 3000 $HOST -p$tPORTS -sCV --version-all --script "+vuln and safe" --script=vulscan/vulscan.nse --script-args "vulscanshowall=0,vulscanoutput='{title} - {link}\n'" -oA "$(pwd)/log/tcp-services" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null);
+		echo -ne "\t$blueColour[$HOST]$endColour Scanning TCP open ports ..." $(nmap -Pn -n --disable-arp-ping -vv -T4 --min-rate 3000 $HOST -p$tPORTS -sCV --version-all --script "+vuln and safe" -oA "$(pwd)/log/tcp-services" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null);
 		if [[ -f "$(pwd)/log/tcp-services.xml" ]];then 
 			echo -e "$greenColour DONE$endColour"
 			echo -e "\t$greenColour[$HOST]$endColour TCP Services scan stored at $grayColour'file://$(pwd)/log/tcp-services.xml$endColour'"
@@ -63,7 +63,7 @@ function services(){
 			echo -e "$greenColour FAILED$endColour"
 		fi
 		rm -f "$(pwd)/log/tports.txt" &>/dev/null
-	elif [[ -f "$ports_path/uports.txt" && ! -z "$(cat $ports_path/uports.txt)" ]];then
+	elif [[ -f "$ports_path/uports.txt" ]];then
 		uPORTS=$(cat "$(pwd)/log/uports.txt" 2>/dev/null)
 		echo -ne "\t$blueColour[$HOST]$endColour Scanning UDP open ports ..." $(nmap -Pn -n --disable-arp-ping -vv -sCUV $HOST -p$uPORTS --version-all --script "+vuln and safe" -oA "$(pwd)/log/udp-services" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null; echo -e "$greenColour Done$endColour"); echo
 		if [[ -f "$(pwd)/log/udp-services.xml" ]];then echo -e "\t$greenColour[$HOST]$endColour UDP Services scan stored at $grayColour'file://$(pwd)/log/udp-services.xml$grayColour'"; fi
@@ -101,7 +101,7 @@ function mysql_enum(){
 	for pass in ['' 'root' 'toor']; do
 		mysql -h $HOST -u 'root' --password="$pass" -e "SELECT user()" &>/dev/null
 		if [ $? -eq 0 ]; then 
-			nmap -Pn -n --disable-arp-ping -p3306 192.168.0.57 --script mysql-users,mysql-databases,mysql-dump-hashes,mysql-variables --script-args 'mysqluser=root,mysqlpass='$pass',username=root,password='$pass -oX "$(pwd)/log/mysql-enum.xml" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null 
+			nmap -Pn -n --disable-arp-ping -p3306 $HOST --script mysql-users,mysql-databases,mysql-dump-hashes,mysql-variables --script-args 'mysqluser=root,mysqlpass='$pass',username=root,password='$pass -oX "$(pwd)/log/mysql-enum.xml" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null 
 &>/dev/null
 		else
 			nmap -p$1 --script 'mysql-enum' $HOST -oX "$(pwd)/log/mysql-enum.xml" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null 
@@ -122,9 +122,9 @@ if [ $? -ne 0 ];then echo -e "\n$redColour[!]$endColour Usage: $0 <OPTIONS> targ
 
 tput civis
 
-echo -ne "\n$blueColour[*]$endColour Updating Vulscan database ..."
-rm /usr/share/nmap/scripts/vulscan/exploitdb.csv &>/dev/null
-wget -q https://www.computec.ch/projekte/vulscan/download/exploitdb.csv -O /usr/share/nmap/scripts/vulscan/exploitdb.csv &>/dev/null
+echo -ne "\n$blueColour[*]$endColour Updating NSE database ..."
+#rm /usr/share/nmap/scripts/vulscan/exploitdb.csv &>/dev/null
+#wget -q https://www.computec.ch/projekte/vulscan/download/exploitdb.csv -O /usr/share/nmap/scripts/vulscan/exploitdb.csv &>/dev/null
 nmap --script-update &>/dev/null
 echo -e "$greenColour Done$endColour"
 echo "${HOST:(-3)}" | grep -oP "\/\d{1,2}" &>/dev/null
@@ -160,7 +160,7 @@ if [[ $? -eq 0 ]];then
 	done < "$(pwd)/targets.txt"
 
 	wait
-	echo -e "\n$blueColour[*]$endColour UDP Service scan started\n"
+	echo -e "$blueColour[*]$endColour UDP Service scan started\n"
 	while read line; do 
 		(HOST=$line; cd $HOST; services; echo) &
 	done < "$(pwd)/targets.txt"
@@ -173,7 +173,7 @@ else
 	TCP
 	echo -e "\n$blueColour[*]$endColour TCP Service scan started\n"
 	services
-	echo -e "\n$blueColour[*]$endColour UDP scan started\n"
+	echo -e "$blueColour[*]$endColour UDP scan started\n"
 	UDP
 	echo -e "\n$blueColour[*]$endColour UDP Service scan started\n"
 	services
