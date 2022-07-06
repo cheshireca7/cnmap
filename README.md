@@ -1,7 +1,7 @@
 # cnmap
 Automated network discovery and port scanning script through Nmap and NSE.
 
-![alt text](https://github.com/cheshireca7/cnmap/blob/master/images/cnmap.png?raw=true)
+![cnmap output](https://raw.githubusercontent.com/cheshireca7/cnmap/main/images/cnmap.png)
 
 ## Usage
 - `./cnmap.sh IP`
