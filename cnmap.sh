@@ -154,14 +154,7 @@ function dns_enum(){
 }
 
 function mysql_enum(){
-	for pass in ['' 'root' 'toor']; do
-		mysql -h $HOST -u 'root' --password="$pass" -e 'SELECT user()' mysql &>/dev/null
-		if [ $? -eq 0 ]; then 
-			nmap -Pn -n --disable-arp-ping -p$1 $HOST --script 'mysql-enum,mysql-users,mysql-databases,mysql-dump-hashes,mysql-variables' --script-args 'mysqluser=root,mysqlpass='$pass',username=root,password='$pass -oX "$(pwd)/log/mysql-enum.xml" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null 
-&>/dev/null
-		fi
-	done
-	if [[ ! -f "$(pwd)/log/mysql-enum.xml" ]];then nmap -p$1 --script 'mysql-enum' $HOST -oX "$(pwd)/log/mysql-enum.xml" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null; fi
+	nmap -Pn -n --disable-arp-ping -p$1 $HOST --script 'mysql-enum,mysql-users,mysql-databases,mysql-dump-hashes,mysql-variables' -oX "$(pwd)/log/mysql-enum.xml" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null
 }
 
 function mssql_enum(){
