@@ -10,4 +10,4 @@ Automated network discovery and port scanning script through Nmap and NSE.
 ## Notes
 - Every scan report will be stored at ./log folder
 - SNMP and TFTP scripts will be run although UDP ports were reported as closed, just to avoid false negatives.
-- For those gorgeous reports I use !(Honze-net)(https://github.com/honze-net/nmap-bootstrap-xsl) stylesheet
+- For those gorgeous reports I use [Honze-net](https://github.com/honze-net/nmap-bootstrap-xsl) stylesheet
