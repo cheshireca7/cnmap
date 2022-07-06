@@ -85,7 +85,7 @@ function services(){
 		tPORTS=$(cat "$(pwd)/log/tports.txt" 2>/dev/null)
 		echo -ne "\t$blueColour[$HOST]$endColour Scanning TCP open ports ..." $(nmap -Pn -n --disable-arp-ping -vv -T4 --min-rate 3000 $HOST -p$tPORTS -sCV --script ssl-enum-ciphers --version-all --version-intensity 5 --script "+vuln and safe" -oA "$(pwd)/log/tcp-services" --stylesheet https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl &>/dev/null);
 		if [[ -f "$(pwd)/log/tcp-services.xml" ]];then 
-			echo -e "$greenColour DONE$endColour"
+			echo -e "$greenColour Done$endColour"
 			echo -e "\t$greenColour[$HOST]$endColour TCP Services scan stored at $grayColour'file://$(pwd)/log/tcp-services.xml$endColour'"
 		else
 			echo -e "$greenColour FAILED$endColour"
