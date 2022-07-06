@@ -193,7 +193,7 @@ if [[ $? -eq 0 ]];then
 	
 	echo -e "\n$blueColour[*]$endColour TCP scan started\n"
 	while read line; do 
-		if [ ! -d "$(pwd)/$line" ]; then mkdir -p "$(pwd)/$line/"{exploits,log,loot,tools}; fi
+		if [ ! -d "$(pwd)/$line/log" ]; then mkdir -p "$(pwd)/$line/log"; fi
 		(HOST=$line; cd $HOST; TCP; echo) &
 	done < "$(pwd)/targets.txt"
 
@@ -218,7 +218,7 @@ if [[ $? -eq 0 ]];then
 	wait
 	rm -f "$(pwd)/targets.txt" &>/dev/null
 else
-	if [ ! -d "$(pwd)/log" ]; then mkdir "$(pwd)/"{exploits,log,loot,tools} 2>/dev/null; fi
+	if [ ! -d "$(pwd)/log" ]; then mkdir "$(pwd)/log" 2>/dev/null; fi
 	echo -e "\n$blueColour[*]$endColour TCP scan started\n"
 	TCP
 	echo -e "\n$blueColour[*]$endColour TCP Service scan started\n"
